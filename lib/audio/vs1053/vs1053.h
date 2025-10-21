@@ -6,6 +6,10 @@
 #include "driver/gpio.h"
 #include "esp_err.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     spi_device_handle_t sci_handle;  // SPI device for SCI (control)
     spi_device_handle_t sdi_handle;  // SPI device for SDI (data)
@@ -41,3 +45,7 @@ int vs1053_read_adpcm_block(vs1053_t* vs, uint8_t* buffer, size_t buffer_size);
 esp_err_t vs1053_start_adpcm_decode(vs1053_t* vs);
 esp_err_t vs1053_write_wav_header_adpcm(vs1053_t* vs, uint32_t sample_rate, uint8_t channels);
 esp_err_t vs1053_stop_playback(vs1053_t* vs);
+
+#ifdef __cplusplus
+}
+#endif

@@ -2,12 +2,12 @@
 
 // Audio codec configuration (VS1053 ADPCM)
 #define AUDIO_SAMPLE_RATE      48000
-#define AUDIO_CHANNELS         2      // Stereo
+#define AUDIO_CHANNELS         1      // Mono (VS1053 LINE2 recording)
 #define AUDIO_BITS_PER_SAMPLE  16     // VS1053 ADPCM internal resolution
 
 // ADPCM block configuration
 #define ADPCM_SAMPLES_PER_BLOCK  256
-#define ADPCM_BLOCK_SIZE_BYTES   264  // Stereo block (132 bytes/channel)
+#define ADPCM_BLOCK_SIZE_BYTES   132  // Mono block (132 bytes for 256 samples)
 #define ADPCM_BLOCK_DURATION_MS  (ADPCM_SAMPLES_PER_BLOCK * 1000 / AUDIO_SAMPLE_RATE)  // ~5.33ms
 
 // Network packet configuration

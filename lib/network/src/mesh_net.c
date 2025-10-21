@@ -7,6 +7,7 @@
 #include <lwip/sockets.h>
 #include <string.h>
 #include <esp_timer.h>
+#include <inttypes.h>
 
 static const char *TAG = "network";
 static int udp_sock = -1;
@@ -16,7 +17,6 @@ static uint32_t last_latency_measurement = 10; // Default 10ms
 esp_err_t network_init_ap(void) {
     ESP_LOGI(TAG, "Initializing AP mode with SSID: %s", MESH_SSID);
 
-    ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
@@ -75,7 +75,6 @@ esp_err_t network_init_ap(void) {
 esp_err_t network_init_sta(void) {
     ESP_LOGI(TAG, "Initializing STA mode - looking for SSID: %s", MESH_SSID);
 
-    ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
@@ -281,7 +280,7 @@ static void network_measure_latency_task(void *pvParameters) {
         if (mode == WIFI_MODE_AP) {
             // In AP mode, simulate realistic latency based on WiFi conditions
             last_latency_measurement = 5 + (esp_random() % 10); // 5-15ms
-            ESP_LOGD(TAG, "AP mode latency simulated: %lu ms", last_latency_measurement);
+            ESP_LOGD(TAG, "AP mode latency simulated: %" PRIu32 " ms", last_latency_measurement);
         } else {
             // In STA mode, measure actual round-trip time
             uint64_t start_time = esp_timer_get_time();
@@ -301,11 +300,11 @@ static void network_measure_latency_task(void *pvParameters) {
                     // Clamp to reasonable range
                     if (last_latency_measurement < 1) last_latency_measurement = 1;
                     if (last_latency_measurement > 100) last_latency_measurement = 100;
-                    ESP_LOGD(TAG, "STA mode latency measured: %lu ms (RTT: %lu ms)", last_latency_measurement, rtt);
+                    ESP_LOGD(TAG, "STA mode latency measured: %" PRIu32 " ms (RTT: %" PRIu32 " ms)", last_latency_measurement, rtt);
                 } else {
                     // Timeout - use previous measurement or default
                     if (last_latency_measurement == 0) last_latency_measurement = 10;
-                    ESP_LOGD(TAG, "STA mode ping timeout, using: %lu ms", last_latency_measurement);
+                    ESP_LOGD(TAG, "STA mode ping timeout, using: %" PRIu32 " ms", last_latency_measurement);
                 }
             }
         }

@@ -1,1 +1,12 @@
-idf_component_register(SRCS "src/usb_audio.c" "src/adc_audio.c" INCLUDE_DIRS "include")
+idf_component_register(
+    SRCS 
+        "tx_pipeline.c"
+        "rx_pipeline.c"
+        "src/vs1053_adafruit_adapter.cpp"
+    INCLUDE_DIRS 
+        "include"
+        "."
+        "vs1053"
+    REQUIRES
+        arduino
+)

@@ -1,12 +1,14 @@
 #include "tx_pipeline.h"
 #include "packet.h"
 #include "config/build.h"
+#include "network/mesh_net.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/ringbuf.h"
 #include "esp_timer.h"
 #include <string.h>
+#include <inttypes.h>
 
 static const char* TAG = "tx_pipeline";
 
@@ -23,13 +25,22 @@ static uint32_t s_sequence = 0;
 
 static void record_task(void* arg) {
     uint8_t block_buffer[ADPCM_BLOCK_SIZE_BYTES];
+    uint32_t last_log_time = 0;
     
     ESP_LOGI(TAG, "Record task started");
     
     while (s_running) {
         int bytes_read = vs1053_read_adpcm_block(s_vs, block_buffer, sizeof(block_buffer));
         
-        if (bytes_read == ADPCM_BLOCK_SIZE_BYTES) {
+        // Log every 5 seconds for debugging
+        uint32_t now = xTaskGetTickCount() / configTICK_RATE_HZ;
+        if (now - last_log_time >= 5) {
+            ESP_LOGI(TAG, "Record: bytes_read=%d, blocks_produced=%" PRIu32, bytes_read, s_blocks_produced);
+            last_log_time = now;
+        }
+        
+        if (bytes_read > 0) {
+            // Accept any size block from VS1053
             if (xRingbufferSend(s_ring_buffer, block_buffer, bytes_read, pdMS_TO_TICKS(10)) == pdTRUE) {
                 s_blocks_produced++;
             } else {
@@ -71,9 +82,15 @@ static void send_task(void* arg) {
         }
         
         if (blocks_in_packet > 0) {
-            // TODO: Send via UDP (s_udp)
-            // For now, just count
-            s_packets_sent++;
+            esp_err_t ret = network_udp_send((uint8_t*)&packet, sizeof(audio_packet_t));
+            if (ret == ESP_OK) {
+                s_packets_sent++;
+                if (s_packets_sent % 100 == 0) {
+                    ESP_LOGI(TAG, "Sent %" PRIu32 " packets", s_packets_sent);
+                }
+            } else {
+                ESP_LOGW(TAG, "Failed to send UDP packet: %s", esp_err_to_name(ret));
+            }
         }
     }
     
@@ -104,7 +121,7 @@ esp_err_t tx_pipeline_start(void) {
         return ESP_ERR_INVALID_STATE;
     }
     
-    esp_err_t ret = vs1053_start_adpcm_record(s_vs, AUDIO_SAMPLE_RATE, true);
+    esp_err_t ret = vs1053_start_adpcm_record(s_vs, AUDIO_SAMPLE_RATE, false); // Mono recording
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start recording: %s", esp_err_to_name(ret));
         return ret;

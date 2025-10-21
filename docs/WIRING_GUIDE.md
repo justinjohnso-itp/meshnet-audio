@@ -47,13 +47,14 @@
 | **Button** |
 | GPIO43 | → | Button (other side via 10kΩ pull-up to 3V3) |
 | **Audio Input** |
-| (External) | → | VS1053 LINE-IN Left |
-| (External) | → | VS1053 LINE-IN Right |
-| (External) | → | VS1053 LINE-IN Ground |
+| Audio Left (Tip) | → | VS1053 MIC+ |
+| Audio Ground (Sleeve) | → | VS1053 AGND |
+| Audio Right (Ring) | — | Not connected (mono only) |
 
 ### Notes for TX:
-- Connect your audio source (phone, laptop) to the VS1053 LINE-IN jack
-- Adjust volume on the source device (VS1053 has fixed gain)
+- **Connect 3.5mm audio cable**: Tip → MIC+, Sleeve → AGND, Ring (right channel) disconnected
+- **MIC input is MONO** - Adafruit VS1053 v4 board does not expose stereo input
+- Adjust volume on source device - MIC input has high gain
 - Button should have 10kΩ pull-up resistor to 3V3
 
 ---

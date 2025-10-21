@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include "control/display.h"
 #include "config/pins.h"
 #include <esp_log.h>
@@ -196,8 +197,8 @@ esp_err_t display_init(void) {
     ssd1306_write_command(0x14);  // Enable charge pump
     ssd1306_write_command(SSD1306_CMD_MEMORY_MODE);
     ssd1306_write_command(0x00);  // Horizontal addressing mode
-    ssd1306_write_command(SSD1306_CMD_SEG_REMAP | 0x01);  // Column 127 mapped to SEG0
-    ssd1306_write_command(SSD1306_CMD_COM_SCAN_DEC);  // Scan from COM[N-1] to COM0 (flip upside down)
+    ssd1306_write_command(SSD1306_CMD_SEG_REMAP | 0x01);  // 180° rotation (pins on right)
+    ssd1306_write_command(SSD1306_CMD_COM_SCAN_DEC);  // 180° rotation (pins on right)
     ssd1306_write_command(SSD1306_CMD_SET_COM_PINS);
     ssd1306_write_command(0x02);  // COM pins for 32-row display
     ssd1306_write_command(SSD1306_CMD_SET_CONTRAST);
@@ -280,10 +281,10 @@ void display_render_tx(display_view_t view, const tx_status_t *status) {
 
     if (view == DISPLAY_VIEW_NETWORK) {
     char buf[32];
-    snprintf(buf, sizeof(buf), "Nodes: %lu", status->connected_nodes);
+    snprintf(buf, sizeof(buf), "Nodes: %" PRIu32 "", status->connected_nodes);
         display_draw_string(0, 0, buf);
 
-        snprintf(buf, sizeof(buf), "Latency: %lu ms", status->latency_ms);
+        snprintf(buf, sizeof(buf), "Latency: %" PRIu32 " ms", status->latency_ms);
         display_draw_string(0, 1, buf);
 
         if (status->rssi == -100) {
@@ -307,14 +308,14 @@ void display_render_tx(display_view_t view, const tx_status_t *status) {
     display_draw_string(0, 0, buf);
 
     if (status->input_mode == INPUT_MODE_TONE) {
-        snprintf(buf, sizeof(buf), "Freq: %lu Hz", status->tone_freq_hz);
+        snprintf(buf, sizeof(buf), "Freq: %" PRIu32 " Hz", status->tone_freq_hz);
             display_draw_string(0, 1, buf);
     } else {
         const char *status_str = status->audio_active ? "Playing..." : "Idle...";
             display_draw_string(0, 1, status_str);
         }
 
-        snprintf(buf, sizeof(buf), "Bandwidth: %lu kbps", status->bandwidth_kbps);
+        snprintf(buf, sizeof(buf), "Bandwidth: %" PRIu32 " kbps", status->bandwidth_kbps);
         display_draw_string(0, 2, buf);
 
         if (status->audio_active) {
@@ -347,10 +348,10 @@ animation_counter++;
 
 if (view == DISPLAY_VIEW_NETWORK) {
 char buf[32];
-    snprintf(buf, sizeof(buf), "Hops: %lu", status->hops);
+    snprintf(buf, sizeof(buf), "Hops: %" PRIu32 "", status->hops);
     display_draw_string(0, 0, buf);
 
-snprintf(buf, sizeof(buf), "Latency: %lu ms", status->latency_ms);
+snprintf(buf, sizeof(buf), "Latency: %" PRIu32 " ms", status->latency_ms);
 display_draw_string(0, 1, buf);
 
     if (status->rssi == -100) {
@@ -363,7 +364,7 @@ display_draw_string(0, 1, buf);
 display_draw_string(0, 0, "Streaming...");
 
 char buf[32];
-snprintf(buf, sizeof(buf), "Bandwidth: %lu kbps", status->bandwidth_kbps);
+snprintf(buf, sizeof(buf), "Bandwidth: %" PRIu32 " kbps", status->bandwidth_kbps);
 display_draw_string(0, 2, buf);
 
 if (status->receiving_audio) {

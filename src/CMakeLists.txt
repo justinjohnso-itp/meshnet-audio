@@ -1,2 +1,17 @@
-
-idf_component_register(SRCS "main.c")
+idf_component_register(
+    SRCS 
+        "rx/main.c"
+        "../lib/audio/tx_pipeline.c"
+        "../lib/audio/rx_pipeline.c"
+        "../lib/audio/src/vs1053_adafruit_adapter.cpp"
+        "../lib/control/src/display_ssd1306.c"
+        "../lib/control/src/buttons.c"
+        "../lib/network/src/mesh_net.c"
+    INCLUDE_DIRS
+        "../lib/audio/include"
+        "../lib/audio"
+        "../lib/audio/vs1053"
+        "../lib/control/include"
+        "../lib/network/include"
+        "../lib/config/include"
+)
