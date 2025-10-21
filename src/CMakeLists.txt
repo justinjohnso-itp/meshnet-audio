@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS 
-        "rx/main.c"
+        "tx/main.c"
         "../lib/audio/tx_pipeline.c"
         "../lib/audio/rx_pipeline.c"
         "../lib/audio/src/vs1053_adafruit_adapter.cpp"

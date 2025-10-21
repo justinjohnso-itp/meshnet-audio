@@ -71,8 +71,14 @@ static void send_task(void* arg) {
         for (int i = 0; i < BLOCKS_PER_PACKET && s_running; i++) {
             block_data = xRingbufferReceive(s_ring_buffer, &item_size, pdMS_TO_TICKS(20));
             
-            if (block_data != NULL && item_size == ADPCM_BLOCK_SIZE_BYTES) {
-                memcpy(&packet.payload[i * ADPCM_BLOCK_SIZE_BYTES], block_data, ADPCM_BLOCK_SIZE_BYTES);
+            if (block_data != NULL && item_size <= ADPCM_BLOCK_SIZE_BYTES) {
+                // Accept blocks up to ADPCM_BLOCK_SIZE_BYTES
+                memcpy(&packet.payload[i * ADPCM_BLOCK_SIZE_BYTES], block_data, item_size);
+                // Zero-pad if needed
+                if (item_size < ADPCM_BLOCK_SIZE_BYTES) {
+                    memset(&packet.payload[i * ADPCM_BLOCK_SIZE_BYTES + item_size], 0, 
+                           ADPCM_BLOCK_SIZE_BYTES - item_size);
+                }
                 vRingbufferReturnItem(s_ring_buffer, block_data);
                 blocks_in_packet++;
             } else {

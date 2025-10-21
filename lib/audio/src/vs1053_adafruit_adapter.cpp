@@ -124,28 +124,40 @@ esp_err_t vs1053_set_volume(vs1053_t* vs, uint8_t left, uint8_t right) {
 esp_err_t vs1053_start_adpcm_record(vs1053_t* vs, uint32_t sample_rate, bool stereo) {
     if (!s_vs) return ESP_ERR_INVALID_STATE;
     
-    esp_err_t ret = vs1053_soft_reset(vs);
+    // Enter ADPCM record mode: SM_ADPCM MUST be set during reset
+    uint16_t mode = SM_SDINEW | SM_RESET | SM_ADPCM;
+    esp_err_t ret = vs1053_sci_write(vs, VS1053_SCI_MODE, mode);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to reset VS1053 before recording");
+        ESP_LOGE(TAG, "Failed to enter ADPCM record mode");
         return ret;
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
     
-    uint16_t mode = SM_SDINEW | SM_ADPCM;
-    ret = vs1053_sci_write(vs, VS1053_SCI_MODE, mode);
+    // Wait for DREQ to go high after reset
+    wait_dreq();
+    vTaskDelay(pdMS_TO_TICKS(10));
+    
+    // Configure AICTRL registers
+    ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL0, 0);  // IMA ADPCM profile
     if (ret != ESP_OK) return ret;
     
-    ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL0, ADPCM_PROFILE_IMA);
+    ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL1, (uint16_t)sample_rate);  // Sample rate in Hz
     if (ret != ESP_OK) return ret;
     
-    uint16_t sr_code = (sample_rate / 1000) & 0xFFFF;
-    ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL1, sr_code);
+    ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL2, 0);  // Default AGC
     if (ret != ESP_OK) return ret;
     
     ret = vs1053_sci_write(vs, VS1053_SCI_AICTRL3, stereo ? 1 : 0);
     if (ret != ESP_OK) return ret;
     
+    // Verify mode and read initial HDAT1
+    uint16_t mode_check = 0, hdat1_check = 0;
+    vs1053_sci_read(vs, VS1053_SCI_MODE, &mode_check);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    vs1053_sci_read(vs, VS1053_SCI_HDAT1, &hdat1_check);
+    
     ESP_LOGI(TAG, "ADPCM recording started: %" PRIu32 " Hz, %s", sample_rate, stereo ? "stereo" : "mono");
+    ESP_LOGI(TAG, "  MODE=0x%04X, HDAT1=%u words", mode_check, hdat1_check);
+    
     return ESP_OK;
 }
 
@@ -156,20 +168,39 @@ esp_err_t vs1053_stop_record(vs1053_t* vs) {
 int vs1053_read_adpcm_block(vs1053_t* vs, uint8_t* buffer, size_t buffer_size) {
     if (!s_vs || !buffer || buffer_size == 0) return 0;
     
-    uint16_t hdat1 = 0;
-    if (vs1053_sci_read(vs, VS1053_SCI_HDAT1, &hdat1) != ESP_OK || hdat1 == 0) {
+    // HDAT1 contains the number of 16-bit WORDS available, not bytes
+    uint16_t words_available = 0;
+    if (vs1053_sci_read(vs, VS1053_SCI_HDAT1, &words_available) != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to read HDAT1");
         return 0;
     }
     
-    size_t to_read = (hdat1 < buffer_size) ? hdat1 : buffer_size;
-    size_t read = 0;
-    
-    while (read < to_read) {
-        uint16_t word = s_vs->sciRead(VS1053_SCI_HDAT0);
-        if (read < buffer_size) buffer[read++] = (uint8_t)(word >> 8);
-        if (read < buffer_size) buffer[read++] = (uint8_t)(word & 0xFF);
+    static uint32_t last_debug = 0;
+    uint32_t now = xTaskGetTickCount() / configTICK_RATE_HZ;
+    if (now - last_debug >= 5) {
+        ESP_LOGI(TAG, "HDAT1 words_available=%u", words_available);
+        last_debug = now;
     }
-    return (int)read;
+    
+    if (words_available == 0) {
+        return 0;
+    }
+    
+    // Calculate how many words we can read (buffer_size is in bytes)
+    size_t words_to_read = words_available;
+    if (words_to_read * 2 > buffer_size) {
+        words_to_read = buffer_size / 2;
+    }
+    
+    // Read words from HDAT0
+    size_t bytes_read = 0;
+    for (size_t i = 0; i < words_to_read; i++) {
+        uint16_t word = s_vs->sciRead(VS1053_SCI_HDAT0);
+        buffer[bytes_read++] = (uint8_t)(word >> 8);
+        buffer[bytes_read++] = (uint8_t)(word & 0xFF);
+    }
+    
+    return (int)bytes_read;
 }
 
 esp_err_t vs1053_start_adpcm_decode(vs1053_t* vs) {
