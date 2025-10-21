@@ -1,14 +1,14 @@
 Import("env")
 
-# Get the PIOENV (e.g., "tx" or "rx")
+# Get the PIOENV (e.g., "s3-tx", "s3-rx", "c6-tx", "c6-rx")
 pio_env = env["PIOENV"]
 
-# Define the source file based on the environment
-if pio_env == "tx":
-    app_sources = "tx/main.c"
+# All envs use the same main.c now (TX/RX determined by build flag UNIT_TX/UNIT_RX)
+app_sources = "main.c"
+
+if "tx" in pio_env:
     message = "Building TX firmware"
 else:
-    app_sources = "rx/main.c"
     message = "Building RX firmware"
 
 print(message)
@@ -20,5 +20,3 @@ idf_component_register(SRCS "{app_sources}")
 
 with open("src/CMakeLists.txt", "w") as f:
     f.write(cmake_content)
-
-# Config files are used individually for now
