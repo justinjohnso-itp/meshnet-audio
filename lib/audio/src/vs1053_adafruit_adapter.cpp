@@ -36,7 +36,8 @@ esp_err_t vs1053_init(vs1053_t* vs, spi_host_device_t /*spi_host_unused*/) {
         
         SPI.begin(VS1053_SPI_SCK, VS1053_SPI_MISO, VS1053_SPI_MOSI);
         
-        static Adafruit_VS1053 vs_inst(VS1053_XCS, VS1053_XDCS, VS1053_DREQ, VS1053_XRESET);
+        // Adafruit_VS1053 constructor: (rst, cs, dcs, dreq)
+        static Adafruit_VS1053 vs_inst(VS1053_XRESET, VS1053_XCS, VS1053_XDCS, VS1053_DREQ);
         s_vs = &vs_inst;
         
         if (!s_vs->begin()) {

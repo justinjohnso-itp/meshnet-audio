@@ -1,5 +1,8 @@
 # FreeRTOS (required for Arduino)
 CONFIG_FREERTOS_HZ=1000
 
+# Stack size for WiFi operations
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
 # I2S
 CONFIG_I2S_ENABLE_TX_CHANNEL=y
